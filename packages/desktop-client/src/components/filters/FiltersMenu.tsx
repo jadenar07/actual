@@ -154,9 +154,12 @@ function ConfigureField<T extends RuleConditionEntity>({
   // For ops that use text matching and expect a string input 
   const isTextOp = (op: T['op']) =>
     ['contains', 'matches', 'doesNotContain'].includes(op);
+  // For account ops that do not use an input value but should preserve the current value in state
+  const isNoValueAccountOp = (op: T['op']) =>
+    ['onBudget', 'offBudget'].includes(op);
 
   // Convert stored ID value into text
-  const resolveIdToName = (
+  const resolveIdToText = (
     field: string,
     subfield: string,
     value: unknown,
@@ -188,7 +191,7 @@ function ConfigureField<T extends RuleConditionEntity>({
   };
 
   // Convert text into stored ID value
-  const resolveNameToId = (
+  const resolveTextToId = (
     field: string,
     subfield: string,
     value: unknown,
@@ -235,12 +238,12 @@ function ConfigureField<T extends RuleConditionEntity>({
     if (isIdField && isSingleIdOp(op) && isTextOp(nextOp)) {
       dispatch({
         type: 'set-value',
-        value: resolveIdToName(field, subfield, value),
+        value: resolveIdToText(field, subfield, value),
       });
     }
     // Text -> Single ID: Only convert if there is a single exact match
     if (isIdField && isTextOp(op) && isSingleIdOp(nextOp)) {
-      const resolvedValue = resolveNameToId(field, subfield, value);
+      const resolvedValue = resolveTextToId(field, subfield, value);
       if (resolvedValue) {
         dispatch({
           type: 'set-value',
@@ -248,20 +251,91 @@ function ConfigureField<T extends RuleConditionEntity>({
         });
       }
     }
-    // Multi ID -> Text: Value may be an array of IDs, so no clear conversion from multiple IDs into a single text string. Clear the value instead.
+    // Multi ID -> Text: If there is exactly one selected ID, convert it to text; otherwise clear the value
     if (isIdField && isMultiIdOp(op) && isTextOp(nextOp)) {
-      dispatch({
-        type: 'set-value',
-        value: '',
-      });
+      if (Array.isArray(value) && value.length === 1) {
+        dispatch({
+          type: 'set-value',
+          value: resolveIdToText(field, subfield, value[0]) || '',
+        });
+      } else {
+        dispatch({
+          type: 'set-value',
+          value: '',
+        });
+      }
     }
-    // Text -> Multi ID: Only convert if there is a single exact match
+    // Text -> Multi ID: Only convert if there is a single exact match and wrap in array
     if (isIdField && isTextOp(op) && isMultiIdOp(nextOp)) {
-      const resolvedValue = resolveNameToId(field, subfield, value);
+      const resolvedValue = resolveTextToId(field, subfield, value);
       if (resolvedValue) {
         dispatch({
           type: 'set-value',
-          value: resolvedValue,
+          value: resolvedValue ? [resolvedValue] : [],
+        });
+      }
+    }
+    // No-value Account -> Text: Preserve the old value while the no-value op is selected, 
+    // then convert when switching back to text
+    if (
+      field === 'account' &&
+      isNoValueAccountOp(op) &&
+      isTextOp(nextOp)
+    ) {
+      if (Array.isArray(value)) {
+        dispatch({
+          type: 'set-value',
+          value:
+            value.length === 1
+              ? resolveIdToText(field, subfield, value[0]) || ''
+              : '',
+        });
+      } else {
+        dispatch({
+          type: 'set-value',
+          value: resolveIdToText(field, subfield, value) || '',
+        });
+      }
+    }
+    // No-value Account -> Single-ID: If preserved value is text, resolve to an ID; 
+    // If it is already a single ID string, keep as-is
+    if (
+      field === 'account' &&
+      isNoValueAccountOp(op) &&
+      isSingleIdOp(nextOp)
+    ) {
+      if (typeof value === 'string') {
+        const resolvedValue = resolveTextToId(field, subfield, value);
+        dispatch({
+          type: 'set-value',
+          value: resolvedValue || value,
+        });
+      } else {
+        dispatch({
+          type: 'set-value',
+          value: '',
+        });
+      }
+    }
+    // No-value Account -> Multi-ID: If the preserved value is text, resolve to a single ID and wrap;
+    // if the preserved value is already a single ID string, wrap it directly;
+    // otherwise clear
+    if (
+      field === 'account' &&
+      isNoValueAccountOp(op) &&
+      isMultiIdOp(nextOp)
+    ) {
+      if (typeof value === 'string') {
+        const resolvedValue = resolveTextToId(field, subfield, value);
+
+        dispatch({
+          type: 'set-value',
+          value: resolvedValue ? [resolvedValue] : [value],
+        });
+      } else {
+        dispatch({
+          type: 'set-value',
+          value: [],
         });
       }
     }
