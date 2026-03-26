@@ -44,9 +44,13 @@ import { subfieldToOptions } from './subfieldToOptions';
 import { updateFilterReducer } from './updateFilterReducer';
 
 import { GenericInput } from '@desktop-client/components/util/GenericInput';
+import { useAccounts } from '@desktop-client/hooks/useAccounts';
+import { useCategories } from '@desktop-client/hooks/useCategories';
 import { useDateFormat } from '@desktop-client/hooks/useDateFormat';
 import { useFormat } from '@desktop-client/hooks/useFormat';
+import { usePayees } from '@desktop-client/hooks/usePayees';
 import { useTransactionFilters } from '@desktop-client/hooks/useTransactionFilters';
+
 
 type FilterReducerState<T extends RuleConditionEntity> = Pick<
   T,
@@ -93,6 +97,9 @@ function ConfigureField<T extends RuleConditionEntity>({
   const { t } = useTranslation();
   const format = useFormat();
   const dateFormat = useDateFormat() || 'MM/dd/yyyy';
+  const accounts = useAccounts();
+  const categories = useCategories();
+  const payees = usePayees();
   const field = initialField === 'category_group' ? 'category' : initialField;
   const [subfield, setSubfield] = useState(initialSubfield);
   const inputRef = useRef<AmountInputRef>(null);
@@ -139,36 +146,156 @@ function ConfigureField<T extends RuleConditionEntity>({
 
   // For ops that filter based on payeeId, those use PayeeFilter, otherwise we use GenericInput
   const isPayeeIdOp = (op: T['op']) =>
-    ['is', 'is not', 'one of', 'not one of'].includes(op);
+    ['is', 'isNot', 'oneOf', 'notOneOf'].includes(op);
+  // For ops that use exact matching with a single stored ID value
+  const isSingleIdOp = (op: T['op']) => ['is', 'isNot'].includes(op);
+  // For ops that use exact matching with multiple stored ID values
+  const isMultiIdOp = (op: T['op']) => ['oneOf', 'notOneOf'].includes(op);
+  // For ops that use text matching and expect a string input 
+  const isTextOp = (op: T['op']) =>
+    ['contains', 'matches', 'doesNotContain'].includes(op);
+
+  // Convert stored ID value into text
+  const resolveIdToName = (
+    field: string,
+    subfield: string,
+    value: unknown,
+  ) => {
+    if (typeof value !== 'string') {
+      return '';
+    }
+    if (field === 'account') {
+      const account = accounts.data?.find(account => account.id === value);
+      return account?.name ?? '';
+    }
+    if (field === 'payee') {
+      const payee = payees.data?.find(payee => payee.id === value);
+      return payee?.name ?? '';
+    }
+    if (field === 'category' && subfield === 'category_group') {
+      const group = categories.data?.grouped.find(group => group.id === value);
+      return group?.name ?? '';
+    }
+    if (field === 'category' && subfield === 'category') {
+      for (const group of categories.data?.grouped || []) {
+        const category = group.categories?.find(category => category.id === value);
+        if (category) {
+          return category.name;
+        }
+      }
+    }
+    return '';
+  };
+
+  // Convert text into stored ID value
+  const resolveNameToId = (
+    field: string,
+    subfield: string,
+    value: unknown,
+  ) => {
+    if (typeof value !== 'string') {
+      return null;
+    }
+    if (field === 'account') {
+      const matches =
+        accounts.data?.filter(account => account.name === value) ?? [];
+      return matches.length === 1 ? matches[0].id : null;
+    }
+    if (field === 'payee') {
+      const matches = payees.data?.filter(payee => payee.name === value) ?? [];
+      return matches.length === 1 ? matches[0].id : null;
+    }
+    if (field === 'category' && subfield === 'category_group') {
+      const matches =
+        categories.data?.grouped.filter(group => group.name === value) ?? [];
+      return matches.length === 1 ? matches[0].id : null;
+    }
+    if (field === 'category' && subfield === 'category') {
+      const matches = [];
+      for (const group of categories.data?.grouped || []) {
+        for (const category of group.categories || []) {
+          if (category.name === value) {
+            matches.push(category);
+          }
+        }
+      }
+      return matches.length === 1 ? matches[0].id : null;
+    }
+    return null;
+  };
+
+  const isIdField =
+  field === 'account' ||
+  field === 'payee' ||
+  field === 'category';
+
+  // Converting values when switching between ops is a bit tricky, so we have some specific rules:
+  const setOp = (nextOp: T['op']) => {
+    // Single ID -> Text: Convert stored ID to text with one to one mapping
+    if (isIdField && isSingleIdOp(op) && isTextOp(nextOp)) {
+      dispatch({
+        type: 'set-value',
+        value: resolveIdToName(field, subfield, value),
+      });
+    }
+    // Text -> Single ID: Only convert if there is a single exact match
+    if (isIdField && isTextOp(op) && isSingleIdOp(nextOp)) {
+      const resolvedValue = resolveNameToId(field, subfield, value);
+      if (resolvedValue) {
+        dispatch({
+          type: 'set-value',
+          value: resolvedValue,
+        });
+      }
+    }
+    // Multi ID -> Text: Value may be an array of IDs, so no clear conversion from multiple IDs into a single text string. Clear the value instead.
+    if (isIdField && isMultiIdOp(op) && isTextOp(nextOp)) {
+      dispatch({
+        type: 'set-value',
+        value: '',
+      });
+    }
+    // Text -> Multi ID: Only convert if there is a single exact match
+    if (isIdField && isTextOp(op) && isMultiIdOp(nextOp)) {
+      const resolvedValue = resolveNameToId(field, subfield, value);
+      if (resolvedValue) {
+        dispatch({
+          type: 'set-value',
+          value: resolvedValue,
+        });
+      }
+    }
+    dispatch({ type: 'set-op', op: nextOp });
+  };
 
   const subfieldSelectOptions = (
-    field: 'amount' | 'date' | 'category',
-  ): Array<readonly [string, string]> => {
-    switch (field) {
-      case 'amount':
-        return [
-          ['amount', t('Amount')],
-          ['amount-inflow', t('Amount (inflow)')],
-          ['amount-outflow', t('Amount (outflow)')],
-        ];
+      field: 'amount' | 'date' | 'category',
+    ): Array<readonly [string, string]> => {
+      switch (field) {
+        case 'amount':
+          return [
+            ['amount', t('Amount')],
+            ['amount-inflow', t('Amount (inflow)')],
+            ['amount-outflow', t('Amount (outflow)')],
+          ];
 
-      case 'date':
-        return [
-          ['date', t('Date')],
-          ['month', t('Month')],
-          ['year', t('Year')],
-        ];
+        case 'date':
+          return [
+            ['date', t('Date')],
+            ['month', t('Month')],
+            ['year', t('Year')],
+          ];
 
-      case 'category':
-        return [
-          ['category', t('Category')],
-          ['category_group', t('Category group')],
-        ];
+        case 'category':
+          return [
+            ['category', t('Category')],
+            ['category_group', t('Category group')],
+          ];
 
-      default:
-        return [];
-    }
-  };
+        default:
+          return [];
+      }
+    };
 
   return (
     <FocusScope>
@@ -242,7 +369,7 @@ function ConfigureField<T extends RuleConditionEntity>({
                 key={currOp}
                 op={currOp}
                 isSelected={currOp === op}
-                onPress={() => dispatch({ type: 'set-op', op: currOp })}
+                onPress={() => setOp(currOp)}
               />
             ))}
             {ops.slice(3, ops.length).map(currOp => (
@@ -250,7 +377,7 @@ function ConfigureField<T extends RuleConditionEntity>({
                 key={currOp}
                 op={currOp}
                 isSelected={currOp === op}
-                onPress={() => dispatch({ type: 'set-op', op: currOp })}
+                onPress={() => setOp(currOp)}
               />
             ))}
           </>
