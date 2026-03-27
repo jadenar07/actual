@@ -51,7 +51,6 @@ import { useFormat } from '@desktop-client/hooks/useFormat';
 import { usePayees } from '@desktop-client/hooks/usePayees';
 import { useTransactionFilters } from '@desktop-client/hooks/useTransactionFilters';
 
-
 type FilterReducerState<T extends RuleConditionEntity> = Pick<
   T,
   'value' | 'op' | 'field'
@@ -151,7 +150,7 @@ function ConfigureField<T extends RuleConditionEntity>({
   const isSingleIdOp = (op: T['op']) => ['is', 'isNot'].includes(op);
   // For ops that use exact matching with multiple stored ID values
   const isMultiIdOp = (op: T['op']) => ['oneOf', 'notOneOf'].includes(op);
-  // For ops that use text matching and expect a string input 
+  // For ops that use text matching and expect a string input
   const isTextOp = (op: T['op']) =>
     ['contains', 'matches', 'doesNotContain'].includes(op);
   // For account ops that do not use an input value but should preserve the current value in state
@@ -159,11 +158,7 @@ function ConfigureField<T extends RuleConditionEntity>({
     ['onBudget', 'offBudget'].includes(op);
 
   // Convert stored ID value into text
-  const resolveIdToText = (
-    field: string,
-    subfield: string,
-    value: unknown,
-  ) => {
+  const resolveIdToText = (field: string, subfield: string, value: unknown) => {
     if (typeof value !== 'string') {
       return '';
     }
@@ -181,7 +176,9 @@ function ConfigureField<T extends RuleConditionEntity>({
     }
     if (field === 'category' && subfield === 'category') {
       for (const group of categories.data?.grouped || []) {
-        const category = group.categories?.find(category => category.id === value);
+        const category = group.categories?.find(
+          category => category.id === value,
+        );
         if (category) {
           return category.name;
         }
@@ -191,11 +188,7 @@ function ConfigureField<T extends RuleConditionEntity>({
   };
 
   // Convert text into stored ID value
-  const resolveTextToId = (
-    field: string,
-    subfield: string,
-    value: unknown,
-  ) => {
+  const resolveTextToId = (field: string, subfield: string, value: unknown) => {
     if (typeof value !== 'string') {
       return null;
     }
@@ -228,9 +221,7 @@ function ConfigureField<T extends RuleConditionEntity>({
   };
 
   const isIdField =
-  field === 'account' ||
-  field === 'payee' ||
-  field === 'category';
+    field === 'account' || field === 'payee' || field === 'category';
 
   // Converting values when switching between ops is a bit tricky, so we have some specific rules:
   const setOp = (nextOp: T['op']) => {
@@ -275,13 +266,9 @@ function ConfigureField<T extends RuleConditionEntity>({
         });
       }
     }
-    // No-value Account -> Text: Preserve the old value while the no-value op is selected, 
+    // No-value Account -> Text: Preserve the old value while the no-value op is selected,
     // then convert when switching back to text
-    if (
-      field === 'account' &&
-      isNoValueAccountOp(op) &&
-      isTextOp(nextOp)
-    ) {
+    if (field === 'account' && isNoValueAccountOp(op) && isTextOp(nextOp)) {
       if (Array.isArray(value)) {
         dispatch({
           type: 'set-value',
@@ -297,13 +284,9 @@ function ConfigureField<T extends RuleConditionEntity>({
         });
       }
     }
-    // No-value Account -> Single-ID: If preserved value is text, resolve to an ID; 
+    // No-value Account -> Single-ID: If preserved value is text, resolve to an ID;
     // If it is already a single ID string, keep as-is
-    if (
-      field === 'account' &&
-      isNoValueAccountOp(op) &&
-      isSingleIdOp(nextOp)
-    ) {
+    if (field === 'account' && isNoValueAccountOp(op) && isSingleIdOp(nextOp)) {
       if (typeof value === 'string') {
         const resolvedValue = resolveTextToId(field, subfield, value);
         dispatch({
@@ -320,11 +303,7 @@ function ConfigureField<T extends RuleConditionEntity>({
     // No-value Account -> Multi-ID: If the preserved value is text, resolve to a single ID and wrap;
     // if the preserved value is already a single ID string, wrap it directly;
     // otherwise clear
-    if (
-      field === 'account' &&
-      isNoValueAccountOp(op) &&
-      isMultiIdOp(nextOp)
-    ) {
+    if (field === 'account' && isNoValueAccountOp(op) && isMultiIdOp(nextOp)) {
       if (typeof value === 'string') {
         const resolvedValue = resolveTextToId(field, subfield, value);
 
@@ -343,33 +322,33 @@ function ConfigureField<T extends RuleConditionEntity>({
   };
 
   const subfieldSelectOptions = (
-      field: 'amount' | 'date' | 'category',
-    ): Array<readonly [string, string]> => {
-      switch (field) {
-        case 'amount':
-          return [
-            ['amount', t('Amount')],
-            ['amount-inflow', t('Amount (inflow)')],
-            ['amount-outflow', t('Amount (outflow)')],
-          ];
+    field: 'amount' | 'date' | 'category',
+  ): Array<readonly [string, string]> => {
+    switch (field) {
+      case 'amount':
+        return [
+          ['amount', t('Amount')],
+          ['amount-inflow', t('Amount (inflow)')],
+          ['amount-outflow', t('Amount (outflow)')],
+        ];
 
-        case 'date':
-          return [
-            ['date', t('Date')],
-            ['month', t('Month')],
-            ['year', t('Year')],
-          ];
+      case 'date':
+        return [
+          ['date', t('Date')],
+          ['month', t('Month')],
+          ['year', t('Year')],
+        ];
 
-        case 'category':
-          return [
-            ['category', t('Category')],
-            ['category_group', t('Category group')],
-          ];
+      case 'category':
+        return [
+          ['category', t('Category')],
+          ['category_group', t('Category group')],
+        ];
 
-        default:
-          return [];
-      }
-    };
+      default:
+        return [];
+    }
+  };
 
   return (
     <FocusScope>
