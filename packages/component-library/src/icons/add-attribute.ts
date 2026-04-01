@@ -108,19 +108,19 @@ const addJSXAttribute = (
                 return false;
               }
 
-              // Only add the color if it doesn't explicitly say no color
-              const attrValueNode = attribute.get('value').node;
-              if (
-                attrValueNode &&
-                // guard against expression containers etc.
-                typeof (attrValueNode as any).value === 'string' &&
-                (attrValueNode as any).value !== 'none'
-              ) {
-                attribute.replaceWith(newAttribute);
+              const attrValueNode = attribute.some((attribute: any) => {
+                if (!isEqualAttribute(attribute)) {
+                  return false;
               }
+              attribute.replaceWith(newAttribute);
 
               return true;
             });
+
+              attribute.replaceWith(newAttribute);
+
+              return true;
+            }); 
 
             if (!replaced) {
               // path[method] expects the container name and node(s)
