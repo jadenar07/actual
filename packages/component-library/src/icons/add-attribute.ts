@@ -1,8 +1,12 @@
 import type { PluginObj } from '@babel/core';
 import type createTemplate from '@babel/template';
-import type * as BabelTypes from '@babel/types';
 import type { NodePath } from '@babel/traverse';
-import type { JSXOpeningElement, JSXAttribute, JSXSpreadAttribute } from '@babel/types';
+import type * as BabelTypes from '@babel/types';
+import type {
+  JSXOpeningElement,
+  JSXAttribute,
+  JSXSpreadAttribute,
+} from '@babel/types';
 
 type AttributeSpec = {
   name: string;
@@ -52,7 +56,9 @@ const addJSXAttribute = (
 
     if (typeof value === 'string' && literal) {
       // Parse the string into an expression node and use a strongly typed result
-      const astResult = (template as unknown as { ast: (code: string) => TemplateAstResult }).ast(value);
+      const astResult = (
+        template as unknown as { ast: (code: string) => TemplateAstResult }
+      ).ast(value);
       return t.jsxExpressionContainer(astResult.expression);
     }
 
