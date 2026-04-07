@@ -111,16 +111,16 @@ const addJSXAttribute = (
               const attrValueNode = attribute.some((attribute: any) => {
                 if (!isEqualAttribute(attribute)) {
                   return false;
-              }
+                }
+                attribute.replaceWith(newAttribute);
+
+                return true;
+              });
+
               attribute.replaceWith(newAttribute);
 
               return true;
             });
-
-              attribute.replaceWith(newAttribute);
-
-              return true;
-            }); 
 
             if (!replaced) {
               // path[method] expects the container name and node(s)
