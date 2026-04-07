@@ -108,15 +108,6 @@ const addJSXAttribute = (
                 return false;
               }
 
-              const attrValueNode = attribute.some((attribute: any) => {
-                if (!isEqualAttribute(attribute)) {
-                  return false;
-                }
-                attribute.replaceWith(newAttribute);
-
-                return true;
-              });
-
               attribute.replaceWith(newAttribute);
 
               return true;
