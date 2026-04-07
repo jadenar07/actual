@@ -1,6 +1,8 @@
 import type { PluginObj } from '@babel/core';
 import type createTemplate from '@babel/template';
 import type * as BabelTypes from '@babel/types';
+import type { NodePath } from '@babel/traverse';
+import type { JSXOpeningElement, JSXAttribute, JSXSpreadAttribute } from '@babel/types';
 
 type AttributeSpec = {
   name: string;
@@ -14,6 +16,9 @@ type Opts = {
   elements: string[];
   attributes: AttributeSpec[];
 };
+
+// Narrowly typed shape for template.ast(...) result when parsing an expression
+type TemplateAstResult = { expression: BabelTypes.Expression };
 
 const positionMethod: Record<
   'start' | 'end',
@@ -46,8 +51,9 @@ const addJSXAttribute = (
     }
 
     if (typeof value === 'string' && literal) {
-      // template.ast may return different shapes; cast to any expression to avoid noisy types
-      return t.jsxExpressionContainer((template as any).ast(value).expression);
+      // Parse the string into an expression node and use a strongly typed result
+      const astResult = (template as unknown as { ast: (code: string) => TemplateAstResult }).ast(value);
+      return t.jsxExpressionContainer(astResult.expression);
     }
 
     if (typeof value === 'string') {
@@ -57,6 +63,7 @@ const addJSXAttribute = (
     return null;
   }
 
+  // ...existing code...
   function getAttribute({
     spread,
     name,
@@ -80,8 +87,31 @@ const addJSXAttribute = (
 
   return {
     visitor: {
-      JSXOpeningElement(path: any) {
-        if (!opts.elements.includes(path.node.name.name)) return;
+      JSXOpeningElement(path: NodePath<JSXOpeningElement>) {
+        function getElementName(nameNode: any): string | null {
+          if (!nameNode) return null;
+          if (t.isJSXIdentifier(nameNode)) {
+            return nameNode.name;
+          }
+          if (t.isJSXMemberExpression(nameNode)) {
+            const objectName = getElementName(nameNode.object);
+            const property = nameNode.property;
+            const propName = t.isJSXIdentifier(property) ? property.name : null;
+            return objectName && propName ? `${objectName}.${propName}` : null;
+          }
+          if (t.isJSXNamespacedName(nameNode)) {
+            const ns = nameNode.namespace;
+            const n = nameNode.name;
+            if (t.isJSXIdentifier(ns) && t.isJSXIdentifier(n)) {
+              return `${ns.name}:${n.name}`;
+            }
+            return null;
+          }
+          return null;
+        }
+
+        const tagName = getElementName(path.node.name);
+        if (!tagName || !opts.elements.includes(tagName)) return;
 
         opts.attributes.forEach(
           ({
@@ -107,9 +137,7 @@ const addJSXAttribute = (
               if (!isEqualAttribute(attribute)) {
                 return false;
               }
-
               attribute.replaceWith(newAttribute);
-
               return true;
             });
 
@@ -121,7 +149,7 @@ const addJSXAttribute = (
         );
       },
     },
-  } as PluginObj;
+  };
 };
 
 export default addJSXAttribute;
