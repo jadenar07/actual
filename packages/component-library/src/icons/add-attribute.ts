@@ -2,7 +2,6 @@ import type { PluginObj } from '@babel/core';
 import type createTemplate from '@babel/template';
 import type { NodePath } from '@babel/traverse';
 import type * as BabelTypes from '@babel/types';
-
 import type {
   JSXOpeningElement,
   JSXAttribute,
@@ -21,7 +20,6 @@ type Opts = {
   elements: string[];
   attributes: AttributeSpec[];
 };
-
 
 const positionMethod: Record<
   'start' | 'end',
