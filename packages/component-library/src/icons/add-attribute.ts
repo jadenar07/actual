@@ -2,6 +2,7 @@ import type { PluginObj } from '@babel/core';
 import type createTemplate from '@babel/template';
 import type { NodePath } from '@babel/traverse';
 import type * as BabelTypes from '@babel/types';
+
 import type {
   JSXOpeningElement,
   JSXAttribute,
@@ -21,8 +22,6 @@ type Opts = {
   attributes: AttributeSpec[];
 };
 
-// Narrowly typed shape for template.ast(...) result when parsing an expression
-type TemplateAstResult = { expression: BabelTypes.Expression };
 
 const positionMethod: Record<
   'start' | 'end',
@@ -55,11 +54,7 @@ const addJSXAttribute = (
     }
 
     if (typeof value === 'string' && literal) {
-      // Parse the string into an expression node and use a strongly typed result
-      const astResult = (
-        template as unknown as { ast: (code: string) => TemplateAstResult }
-      ).ast(value);
-      return t.jsxExpressionContainer(astResult.expression);
+      return t.jsxExpressionContainer(template.expression.ast(value));
     }
 
     if (typeof value === 'string') {
@@ -69,7 +64,6 @@ const addJSXAttribute = (
     return null;
   }
 
-  // ...existing code...
   function getAttribute({
     spread,
     name,
