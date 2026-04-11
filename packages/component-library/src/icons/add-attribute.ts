@@ -1,48 +1,26 @@
-import type { PluginObj } from '@babel/core';
-import type createTemplate from '@babel/template';
+import type BabelTemplate from '@babel/template';
 import type { NodePath } from '@babel/traverse';
 import type * as BabelTypes from '@babel/types';
-import type {
-  JSXOpeningElement,
-  JSXAttribute,
-  JSXSpreadAttribute,
-} from '@babel/types';
+import type { Attribute, Options } from '@svgr/babel-plugin-add-jsx-attribute';
 
-type AttributeSpec = {
-  name: string;
-  value?: unknown;
-  spread?: boolean;
-  literal?: boolean;
-  position?: 'start' | 'end';
+type PluginAPI = {
+  types: typeof BabelTypes;
+  template: typeof BabelTemplate;
 };
 
-type Opts = {
-  elements: string[];
-  attributes: AttributeSpec[];
-};
-
-const positionMethod: Record<
-  'start' | 'end',
-  'unshiftContainer' | 'pushContainer'
-> = {
+const positionMethod = {
   start: 'unshiftContainer',
   end: 'pushContainer',
-};
+} as const;
 
-const addJSXAttribute = (
-  {
-    types: t,
-    template,
-  }: { types: typeof BabelTypes; template: typeof createTemplate },
-  opts: Opts,
-): PluginObj => {
+const addJSXAttribute = ({ types: t, template }: PluginAPI, opts: Options) => {
   function getAttributeValue({
     literal,
     value,
-  }: {
-    literal?: boolean;
-    value?: unknown;
-  }) {
+  }: Pick<Attribute, 'literal' | 'value'>):
+    | BabelTypes.JSXExpressionContainer
+    | BabelTypes.StringLiteral
+    | null {
     if (typeof value === 'boolean') {
       return t.jsxExpressionContainer(t.booleanLiteral(value));
     }
@@ -62,17 +40,7 @@ const addJSXAttribute = (
     return null;
   }
 
-  function getAttribute({
-    spread,
-    name,
-    value,
-    literal,
-  }: {
-    spread?: boolean;
-    name: string;
-    value?: unknown;
-    literal?: boolean;
-  }) {
+  function getAttribute({ spread, name, value, literal }: Attribute) {
     if (spread) {
       return t.jsxSpreadAttribute(t.identifier(name));
     }
@@ -85,31 +53,9 @@ const addJSXAttribute = (
 
   return {
     visitor: {
-      JSXOpeningElement(path: NodePath<JSXOpeningElement>) {
-        function getElementName(nameNode: any): string | null {
-          if (!nameNode) return null;
-          if (t.isJSXIdentifier(nameNode)) {
-            return nameNode.name;
-          }
-          if (t.isJSXMemberExpression(nameNode)) {
-            const objectName = getElementName(nameNode.object);
-            const property = nameNode.property;
-            const propName = t.isJSXIdentifier(property) ? property.name : null;
-            return objectName && propName ? `${objectName}.${propName}` : null;
-          }
-          if (t.isJSXNamespacedName(nameNode)) {
-            const ns = nameNode.namespace;
-            const n = nameNode.name;
-            if (t.isJSXIdentifier(ns) && t.isJSXIdentifier(n)) {
-              return `${ns.name}:${n.name}`;
-            }
-            return null;
-          }
-          return null;
-        }
-
-        const tagName = getElementName(path.node.name);
-        if (!tagName || !opts.elements.includes(tagName)) return;
+      JSXOpeningElement(path: NodePath<BabelTypes.JSXOpeningElement>) {
+        if (!t.isJSXIdentifier(path.node.name)) return;
+        if (!opts.elements.includes(path.node.name.name)) return;
 
         opts.attributes.forEach(
           ({
@@ -118,12 +64,16 @@ const addJSXAttribute = (
             spread = false,
             literal = false,
             position = 'end',
-          }: AttributeSpec) => {
+          }) => {
             const method = positionMethod[position];
             const newAttribute = getAttribute({ spread, name, value, literal });
             const attributes = path.get('attributes');
 
-            const isEqualAttribute = (attribute: any) => {
+            const isEqualAttribute = (
+              attribute: NodePath<
+                BabelTypes.JSXAttribute | BabelTypes.JSXSpreadAttribute
+              >,
+            ) => {
               if (spread) {
                 return attribute.get('argument').isIdentifier({ name });
               }
@@ -131,16 +81,25 @@ const addJSXAttribute = (
               return attribute.get('name').isJSXIdentifier({ name });
             };
 
-            const replaced = attributes.some((attribute: any) => {
+            const replaced = attributes.some(attribute => {
               if (!isEqualAttribute(attribute)) {
                 return false;
               }
-              attribute.replaceWith(newAttribute);
+
+              // Only add the color if it doesn't explicitly say no
+              // color
+              const attrValue = attribute.get('value');
+              if (
+                !attrValue.isStringLiteral() ||
+                attrValue.node.value !== 'none'
+              ) {
+                attribute.replaceWith(newAttribute);
+              }
+
               return true;
             });
 
             if (!replaced) {
-              // path[method] expects the container name and node(s)
               path[method]('attributes', newAttribute);
             }
           },
