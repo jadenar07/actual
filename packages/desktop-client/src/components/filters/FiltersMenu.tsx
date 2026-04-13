@@ -35,8 +35,11 @@ import {
 } from 'date-fns';
 
 import { GenericInput } from '#components/util/GenericInput';
+import { useAccounts } from '#hooks/useAccounts';
+import { useCategories } from '#hooks/useCategories';
 import { useDateFormat } from '#hooks/useDateFormat';
 import { useFormat } from '#hooks/useFormat';
+import { usePayees } from '#hooks/usePayees';
 import { useTransactionFilters } from '#hooks/useTransactionFilters';
 
 import { CompactFiltersButton } from './CompactFiltersButton';
@@ -46,7 +49,6 @@ import { PayeeFilter } from './PayeeFilter';
 import { subfieldFromFilter } from './subfieldFromFilter';
 import { subfieldToOptions } from './subfieldToOptions';
 import { updateFilterReducer } from './updateFilterReducer';
-
 type FilterReducerState<T extends RuleConditionEntity> = Pick<
   T,
   'value' | 'op' | 'field'
