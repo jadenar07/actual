@@ -40,7 +40,7 @@
     "build:browser": "./bin/package-browser",
     "build:desktop": "./bin/package-electron",
     "build:plugins-service": "yarn workspace plugins-service build",
-    "build:api": "yarn workspace @actual-app/api build",
+    "build:api": "yarn build --scope=@actual-app/api",
     "build:cli": "yarn build --scope=@actual-app/cli",
     "build:docs": "yarn workspace docs build",
     "build:storybook": "yarn workspace @actual-app/components build:storybook",
@@ -100,6 +100,9 @@
     "socks": ">=2.8.3"
   },
   "lint-staged": {
+    "packages/*/package.json": [
+      "ts-node ./bin/validate-publish-imports.ts --fix"
+    ],
     "*.{js,mjs,jsx,ts,tsx,md,json,yml,yaml}": [
       "oxfmt --no-error-on-unmatched-pattern"
     ],
