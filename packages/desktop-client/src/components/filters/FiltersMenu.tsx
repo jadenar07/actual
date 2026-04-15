@@ -50,13 +50,6 @@ import { subfieldFromFilter } from './subfieldFromFilter';
 import { subfieldToOptions } from './subfieldToOptions';
 import { updateFilterReducer } from './updateFilterReducer';
 
-import { GenericInput } from '@desktop-client/components/util/GenericInput';
-import { useAccounts } from '@desktop-client/hooks/useAccounts';
-import { useCategories } from '@desktop-client/hooks/useCategories';
-import { useDateFormat } from '@desktop-client/hooks/useDateFormat';
-import { useFormat } from '@desktop-client/hooks/useFormat';
-import { usePayees } from '@desktop-client/hooks/usePayees';
-import { useTransactionFilters } from '@desktop-client/hooks/useTransactionFilters';
 
 type FilterReducerState<T extends RuleConditionEntity> = Pick<
   T,
