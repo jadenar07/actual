@@ -1072,7 +1072,7 @@ class AccountInternal extends PureComponent<
     const lastReconciled = new Date().getTime().toString();
     this.props.onUpdateAccount({ ...account, last_reconciled: lastReconciled });
 
-    this.setState((state) => ({
+    this.setState(state => ({
       reconcileAmount: null,
       showCleared: state.prevShowCleared,
     }));
@@ -1093,7 +1093,7 @@ class AccountInternal extends PureComponent<
     ]);
 
     // Optimistic UI: update the transaction list before sending the data to the database
-    this.setState((state) => ({
+    this.setState(state => ({
       transactions: [...reconciliationTransactions, ...state.transactions],
     }));
 
@@ -1407,11 +1407,11 @@ class AccountInternal extends PureComponent<
     );
   };
 
-  onConditionsOpChange = (value: "and" | "or") => {
-    this.setState({ filterConditionsOp: value });
-    this.setState({
-      filterId: { ...this.state.filterId, status: "changed" } as SavedFilter,
-    });
+  onConditionsOpChange = (value: 'and' | 'or') => {
+    this.setState(state => ({
+      filterConditionsOp: value,
+      filterId: { ...state.filterId, status: 'changed' } as SavedFilter,
+    }));
     void this.applyFilters([...this.state.filterConditions]);
     if (this.state.search !== "") {
       this.onSearch(this.state.search);
@@ -1433,7 +1433,7 @@ class AccountInternal extends PureComponent<
         void this.applyFilters([...(savedFilter.conditions ?? [])]);
       }
     }
-    this.setState((state) => ({
+    this.setState(state => ({
       filterId: { ...state.filterId, ...savedFilter },
     }));
   };
@@ -1456,13 +1456,13 @@ class AccountInternal extends PureComponent<
         c === oldCondition ? updatedCondition : c
       )
     );
-    this.setState((state) => ({
+    this.setState(state => ({
       filterId: {
-        ...this.state.filterId,
-        status: this.state.filterId && "changed",
+        ...state.filterId,
+        status: state.filterId && 'changed',
       } as SavedFilter,
     }));
-    if (this.state.search !== "") {
+    if (this.state.search !== '') {
       this.onSearch(this.state.search);
     }
   };
@@ -1472,13 +1472,12 @@ class AccountInternal extends PureComponent<
       this.state.filterConditions.filter((c) => c !== condition)
     );
     if (this.state.filterConditions.length === 1) {
-      this.setState({ filterId: undefined });
-      this.setState({ filterConditionsOp: "and" });
+      this.setState({ filterId: undefined, filterConditionsOp: 'and' });
     } else {
-      this.setState((state) => ({
+      this.setState(state => ({
         filterId: {
-          ...this.state.filterId,
-          status: this.state.filterId && "changed",
+          ...state.filterId,
+          status: state.filterId && 'changed',
         } as SavedFilter,
       }));
     }
@@ -1518,10 +1517,10 @@ class AccountInternal extends PureComponent<
         return;
       }
 
-      this.setState((state) => ({
+      this.setState(state => ({
         filterId: {
-          ...this.state.filterId,
-          status: this.state.filterId && "changed",
+          ...state.filterId,
+          status: state.filterId && 'changed',
         } as SavedFilter,
       }));
       void this.applyFilters([...filterConditions, condition]);
@@ -1723,7 +1722,7 @@ class AccountInternal extends PureComponent<
     if (headerClicked === this.state.sort?.field) {
       prevField = this.state.sort.prevField;
       prevAscDesc = this.state.sort.prevAscDesc;
-      this.setState((state) => ({
+      this.setState(state => ({
         sort: {
           ...state.sort,
           ascDesc,
@@ -1734,7 +1733,7 @@ class AccountInternal extends PureComponent<
       //of current sort column as prev
       prevField = this.state.sort?.field;
       prevAscDesc = this.state.sort?.ascDesc;
-      this.setState((state) => ({
+      this.setState(state => ({
         sort: {
           field: headerClicked,
           ascDesc,
