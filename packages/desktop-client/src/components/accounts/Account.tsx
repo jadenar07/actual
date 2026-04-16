@@ -1331,8 +1331,6 @@ class AccountInternal extends PureComponent<
       t => t.parent_id === ruleTransaction.id,
     );
 
-    console.log('Transactions: ', transactions);
-
     const payeeCondition = ruleTransaction.imported_payee
       ? ({
           field: 'imported_payee',
