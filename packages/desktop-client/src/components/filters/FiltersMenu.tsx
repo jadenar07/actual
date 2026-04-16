@@ -477,38 +477,41 @@ function ConfigureField<T extends RuleConditionEntity>({
         }}
       >
         {type !== 'boolean' &&
-        (field !== 'payee' || !isIdOp(op)) &&
-        (field !== 'account' || !isNoValueAccountOp(op)) && (
-          <GenericInput
-            ref={inputRef}
-            // @ts-expect-error - fix me
-            field={field === 'date' || field === 'category' ? subfield : field}
-            // @ts-expect-error - fix me
-            type={
-              type === 'id' &&
-              (op === 'contains' ||
-                op === 'matches' ||
-                op === 'doesNotContain' ||
-                op === 'hasTags')
-                ? 'string'
-                : type
-            }
-            numberFormatType="currency"
-            // @ts-expect-error - fix me
-            value={
-              formattedValue ?? (op === 'oneOf' || op === 'notOneOf' ? [] : '')
-            }
-            // @ts-expect-error - fix me
-            multi={op === 'oneOf' || op === 'notOneOf'}
-            op={op}
-            options={subfieldToOptions(field, subfield)}
-            style={{ marginTop: 10 }}
-            // oxlint-disable-next-line typescript/no-explicit-any
-            onChange={(v: any) => {
-              dispatch({ type: 'set-value', value: v });
-            }}
-          />
-        )}
+          (field !== 'payee' || !isIdOp(op)) &&
+          (field !== 'account' || !isNoValueAccountOp(op)) && (
+            <GenericInput
+              ref={inputRef}
+              // @ts-expect-error - fix me
+              field={
+                field === 'date' || field === 'category' ? subfield : field
+              }
+              // @ts-expect-error - fix me
+              type={
+                type === 'id' &&
+                (op === 'contains' ||
+                  op === 'matches' ||
+                  op === 'doesNotContain' ||
+                  op === 'hasTags')
+                  ? 'string'
+                  : type
+              }
+              numberFormatType="currency"
+              // @ts-expect-error - fix me
+              value={
+                formattedValue ??
+                (op === 'oneOf' || op === 'notOneOf' ? [] : '')
+              }
+              // @ts-expect-error - fix me
+              multi={op === 'oneOf' || op === 'notOneOf'}
+              op={op}
+              options={subfieldToOptions(field, subfield)}
+              style={{ marginTop: 10 }}
+              // oxlint-disable-next-line typescript/no-explicit-any
+              onChange={(v: any) => {
+                dispatch({ type: 'set-value', value: v });
+              }}
+            />
+          )}
 
         {field === 'payee' && isIdOp(op) && (
           <PayeeFilter
