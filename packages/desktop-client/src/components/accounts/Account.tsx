@@ -41,7 +41,6 @@ import type {
 import { t } from 'i18next';
 import debounce from 'lodash/debounce';
 import isEqual from 'lodash/isEqual';
-import { v4 as uuidv4 } from 'uuid';
 
 import {
   useReopenAccountMutation,
@@ -1304,7 +1303,7 @@ class AccountInternal extends PureComponent<
 
     const [firstTransaction] = transactions;
     const parentTransaction = {
-      id: uuidv4(),
+      id: crypto.randomUUID(),
       is_parent: true,
       cleared: transactions.every(t => !!t.cleared),
       date: firstTransaction.date,
