@@ -540,16 +540,18 @@ class AccountInternal extends PureComponent<
           }
         }
 
+        const balances = this.state.showBalances
+          ? await this.calculateBalances()
+          : null;
+        const filteredAmount = await this.getFilteredAmount();
         this.setState(
           {
             transactions: data,
             transactionsFiltered: isFiltered,
             loading: false,
             workingHard: false,
-            balances: this.state.showBalances
-              ? await this.calculateBalances()
-              : null,
-            filteredAmount: await this.getFilteredAmount(),
+            balances,
+            filteredAmount,
           },
           () => {
             if (firstLoad) {
@@ -1070,10 +1072,10 @@ class AccountInternal extends PureComponent<
     const lastReconciled = new Date().getTime().toString();
     this.props.onUpdateAccount({ ...account, last_reconciled: lastReconciled });
 
-    this.setState({
+    this.setState(state => ({
       reconcileAmount: null,
-      showCleared: this.state.prevShowCleared,
-    });
+      showCleared: state.prevShowCleared,
+    }));
   };
 
   onCreateReconciliationTransaction = async (diff: number) => {
@@ -1091,9 +1093,9 @@ class AccountInternal extends PureComponent<
     ]);
 
     // Optimistic UI: update the transaction list before sending the data to the database
-    this.setState({
-      transactions: [...reconciliationTransactions, ...this.state.transactions],
-    });
+    this.setState(state => ({
+      transactions: [...reconciliationTransactions, ...state.transactions],
+    }));
 
     // run rules on the reconciliation transaction
     const ruledTransactions = await Promise.all(
@@ -1406,10 +1408,10 @@ class AccountInternal extends PureComponent<
   };
 
   onConditionsOpChange = (value: 'and' | 'or') => {
-    this.setState({ filterConditionsOp: value });
-    this.setState({
-      filterId: { ...this.state.filterId, status: 'changed' } as SavedFilter,
-    });
+    this.setState(state => ({
+      filterConditionsOp: value,
+      filterId: { ...state.filterId, status: 'changed' } as SavedFilter,
+    }));
     void this.applyFilters([...this.state.filterConditions]);
     if (this.state.search !== '') {
       this.onSearch(this.state.search);
@@ -1431,7 +1433,9 @@ class AccountInternal extends PureComponent<
         void this.applyFilters([...(savedFilter.conditions ?? [])]);
       }
     }
-    this.setState({ filterId: { ...this.state.filterId, ...savedFilter } });
+    this.setState(state => ({
+      filterId: { ...state.filterId, ...savedFilter },
+    }));
   };
 
   onClearFilters = () => {
@@ -1452,12 +1456,12 @@ class AccountInternal extends PureComponent<
         c === oldCondition ? updatedCondition : c,
       ),
     );
-    this.setState({
+    this.setState(state => ({
       filterId: {
-        ...this.state.filterId,
-        status: this.state.filterId && 'changed',
+        ...state.filterId,
+        status: state.filterId && 'changed',
       } as SavedFilter,
-    });
+    }));
     if (this.state.search !== '') {
       this.onSearch(this.state.search);
     }
@@ -1468,15 +1472,14 @@ class AccountInternal extends PureComponent<
       this.state.filterConditions.filter(c => c !== condition),
     );
     if (this.state.filterConditions.length === 1) {
-      this.setState({ filterId: undefined });
-      this.setState({ filterConditionsOp: 'and' });
+      this.setState({ filterId: undefined, filterConditionsOp: 'and' });
     } else {
-      this.setState({
+      this.setState(state => ({
         filterId: {
-          ...this.state.filterId,
-          status: this.state.filterId && 'changed',
+          ...state.filterId,
+          status: state.filterId && 'changed',
         } as SavedFilter,
-      });
+      }));
     }
     if (this.state.search !== '') {
       this.onSearch(this.state.search);
@@ -1514,12 +1517,12 @@ class AccountInternal extends PureComponent<
         return;
       }
 
-      this.setState({
+      this.setState(state => ({
         filterId: {
-          ...this.state.filterId,
-          status: this.state.filterId && 'changed',
+          ...state.filterId,
+          status: state.filterId && 'changed',
         } as SavedFilter,
-      });
+      }));
       void this.applyFilters([...filterConditions, condition]);
     }
 
@@ -1719,25 +1722,25 @@ class AccountInternal extends PureComponent<
     if (headerClicked === this.state.sort?.field) {
       prevField = this.state.sort.prevField;
       prevAscDesc = this.state.sort.prevAscDesc;
-      this.setState({
+      this.setState(state => ({
         sort: {
-          ...this.state.sort,
+          ...state.sort,
           ascDesc,
         },
-      });
+      }));
     } else {
       //if switching to new column then capture state
       //of current sort column as prev
       prevField = this.state.sort?.field;
       prevAscDesc = this.state.sort?.ascDesc;
-      this.setState({
+      this.setState(state => ({
         sort: {
           field: headerClicked,
           ascDesc,
-          prevField: this.state.sort?.field,
-          prevAscDesc: this.state.sort?.ascDesc,
+          prevField: state.sort?.field,
+          prevAscDesc: state.sort?.ascDesc,
         },
-      });
+      }));
     }
 
     this.applySort(headerClicked, ascDesc, prevField, prevAscDesc);
