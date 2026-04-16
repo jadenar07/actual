@@ -142,8 +142,8 @@ function ConfigureField<T extends RuleConditionEntity>({
     return value;
   }, [value, field, subfield, dateFormat]);
 
-  // For ops that filter based on payeeId, those use PayeeFilter, otherwise we use GenericInput
-  const isPayeeIdOp = (op: T['op']) =>
+  // For ops that filter based on IDs
+  const isIdOp = (op: T['op']) =>
     ['is', 'isNot', 'oneOf', 'notOneOf'].includes(op);
   // For ops that use exact matching with a single stored ID value
   const isSingleIdOp = (op: T['op']) => ['is', 'isNot'].includes(op);
@@ -477,43 +477,40 @@ function ConfigureField<T extends RuleConditionEntity>({
         }}
       >
         {type !== 'boolean' &&
-          (field !== 'payee' || !isPayeeIdOp(op)) &&
-          (field !== 'account' || !isNoValueAccountOp(op)) && (
-            <GenericInput
-              ref={inputRef}
-              // @ts-expect-error - fix me
-              field={
-                field === 'date' || field === 'category' ? subfield : field
-              }
-              // @ts-expect-error - fix me
-              type={
-                type === 'id' &&
-                (op === 'contains' ||
-                  op === 'matches' ||
-                  op === 'doesNotContain' ||
-                  op === 'hasTags')
-                  ? 'string'
-                  : type
-              }
-              numberFormatType="currency"
-              // @ts-expect-error - fix me
-              value={
-                formattedValue ??
-                (op === 'oneOf' || op === 'notOneOf' ? [] : '')
-              }
-              // @ts-expect-error - fix me
-              multi={op === 'oneOf' || op === 'notOneOf'}
-              op={op}
-              options={subfieldToOptions(field, subfield)}
-              style={{ marginTop: 10 }}
-              // oxlint-disable-next-line typescript/no-explicit-any
-              onChange={(v: any) => {
-                dispatch({ type: 'set-value', value: v });
-              }}
-            />
-          )}
+        (field !== 'payee' || !isIdOp(op)) &&
+        (field !== 'account' || !isNoValueAccountOp(op)) && (
+          <GenericInput
+            ref={inputRef}
+            // @ts-expect-error - fix me
+            field={field === 'date' || field === 'category' ? subfield : field}
+            // @ts-expect-error - fix me
+            type={
+              type === 'id' &&
+              (op === 'contains' ||
+                op === 'matches' ||
+                op === 'doesNotContain' ||
+                op === 'hasTags')
+                ? 'string'
+                : type
+            }
+            numberFormatType="currency"
+            // @ts-expect-error - fix me
+            value={
+              formattedValue ?? (op === 'oneOf' || op === 'notOneOf' ? [] : '')
+            }
+            // @ts-expect-error - fix me
+            multi={op === 'oneOf' || op === 'notOneOf'}
+            op={op}
+            options={subfieldToOptions(field, subfield)}
+            style={{ marginTop: 10 }}
+            // oxlint-disable-next-line typescript/no-explicit-any
+            onChange={(v: any) => {
+              dispatch({ type: 'set-value', value: v });
+            }}
+          />
+        )}
 
-        {field === 'payee' && isPayeeIdOp(op) && (
+        {field === 'payee' && isIdOp(op) && (
           <PayeeFilter
             // @ts-expect-error - fix me
             value={formattedValue}
