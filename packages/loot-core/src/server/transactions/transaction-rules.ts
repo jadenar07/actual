@@ -1045,6 +1045,24 @@ export async function prepareTransactionForRules(
   accounts: Map<string, db.DbAccount> | null = null,
 ): Promise<TransactionForRules> {
   const r: TransactionForRules = { ...trans };
+  // normalize undefined payee/category to null so "is nothing" rules can match
+  const normalizedRuleFields: string[] = [];
+
+  if (r.payee === undefined) {
+    r.payee = null;
+    normalizedRuleFields.push('payee');
+  }
+
+  if (r.category === undefined) {
+    r.category = null;
+    normalizedRuleFields.push('category');
+  }
+
+  if (normalizedRuleFields.length > 0) {
+    (
+      r as TransactionForRules & { _normalizedRuleFields?: string[] }
+    )._normalizedRuleFields = normalizedRuleFields;
+  }
   if (trans.payee) {
     const payee = await getPayee(trans.payee);
     if (payee) {
@@ -1072,7 +1090,7 @@ export async function prepareTransactionForRules(
       r._category_name = category.name;
     }
   }
-
+  
   return r;
 }
 
@@ -1122,6 +1140,22 @@ export async function finalizeTransactionForRules(
         delete stx.parent_amount;
       }
     });
+  }
+
+  // remove temporary normalization used for "is nothing" rules
+  const normalizedRuleFields = (
+    trans as TransactionEntity & { _normalizedRuleFields?: string[] }
+  )._normalizedRuleFields;
+
+  if (normalizedRuleFields) {
+    normalizedRuleFields.forEach(field => {
+      if (trans[field] === null) {
+        delete trans[field];
+      }
+    });
+
+    delete (trans as TransactionEntity & { _normalizedRuleFields?: string[] })
+      ._normalizedRuleFields;
   }
 
   return trans;
