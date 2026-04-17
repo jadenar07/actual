@@ -1090,7 +1090,7 @@ export async function prepareTransactionForRules(
       r._category_name = category.name;
     }
   }
-  
+
   return r;
 }
 
