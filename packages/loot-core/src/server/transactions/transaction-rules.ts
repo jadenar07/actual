@@ -967,6 +967,8 @@ export type TransactionForRules = TransactionEntity & {
   parent_amount?: number;
   /** Prefetched cent balances for BALANCE_OF("…") in rule formulas; cleared in finalize */
   _balanceOfPrefetched?: Map<string, number>;
+  /** Fields normalized from undefined→null for rule matching; cleared in finalize */
+  _normalizedRuleFields?: string[];
 };
 
 /**
@@ -1059,9 +1061,7 @@ export async function prepareTransactionForRules(
   }
 
   if (normalizedRuleFields.length > 0) {
-    (
-      r as TransactionForRules & { _normalizedRuleFields?: string[] }
-    )._normalizedRuleFields = normalizedRuleFields;
+    r._normalizedRuleFields = normalizedRuleFields;
   }
   if (trans.payee) {
     const payee = await getPayee(trans.payee);
