@@ -211,7 +211,7 @@ A working example of API fields:
       "parent_id": "parent-id",
       "is_child": true,
       "is_parent": false,
-      "category: "71376207-72f9-4b2b-ae24-0931a226f76a",
+      "category": "71376207-72f9-4b2b-ae24-0931a226f76a",
     },
     {
       "amount": 150,
