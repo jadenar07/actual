@@ -168,7 +168,7 @@ an array of sub-transactions in the `subtransactions` field. This field is prima
 
 In practice, updating subtransactions individually may not work reliably. To modify split transactions, update the parent transaction and provide the full `subtransactions` array.
 
-Subtransactions can specify the following fields, must satisfy the same required fields as standard transactions.
+Subtransactions are full transaction records and must include all standard transaction fields.
 
 When creating subtransactions via the API, each subtransaction typically requires:
 
@@ -195,9 +195,15 @@ will be displayed within the app.
 
 A transaction must be marked with `is_parent: true` before subtransactions can be added.
 
-If `is_parent` is not set to `true`, subtransactions may be ignored or fail validation.
+If `is_parent` is not set to `true` on the parent transaction, any provided `subtransactions` will be ignored and the transaction will be treated as a standard (non-split) transaction. No split will be created.
+
+Subtransactions are only processed when the parent transaction has `is_parent: true`.
+
+If subtransactions are provided but are invalid (e.g. missing required fields such as `account` or `date`), the API will return a validation error (HTTP 400) indicating that required transaction fields are missing.
 
 A working example of API fields:
+
+**Note:** When creating a new split transaction, you typically don't need to provide an `id` for the parent; the system will generate one. The parent transaction's `amount` should equal the sum of all subtransaction amounts.
 
 ```js
 {
@@ -225,13 +231,6 @@ A working example of API fields:
   ]
 }
 ```
-
-#### Behavior Notes
-
-- Subtransactions behave as full transaction records, not lightweight objects.
-- Each subtransaction must satisfy required transaction fields such as `account` and `date`.
-- The parent transaction must have `is_parent: true` before subtransactions are added.
-- Updating subtransactions individually may not work reliably. Instead, replace the full set of subtransactions via the parent transaction.
 
 #### Transfers
 
