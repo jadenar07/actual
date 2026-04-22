@@ -150,8 +150,10 @@ function AllTransactions({
   const categoryNamesById = useMemo(
     () =>
       new Map<string, string>(
-        categoryGroups.flatMap(group =>
-          group.categories?.map(category => [category.id, category.name]) ?? [],
+        categoryGroups.flatMap(
+          group =>
+            group.categories?.map(category => [category.id, category.name]) ??
+            [],
         ),
       ),
     [categoryGroups],
