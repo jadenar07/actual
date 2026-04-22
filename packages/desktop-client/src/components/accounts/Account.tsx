@@ -134,16 +134,22 @@ function AllTransactions({
   const { previewTransactions, isLoading: isPreviewTransactionsLoading } =
     useAccountPreviewTransactions({ accountId });
   const accountNamesById = useMemo(
-    () => new Map(accounts.map(account => [account.id, account.name])),
+    () =>
+      new Map<AccountEntity['id'], AccountEntity['name']>(
+        accounts.map(account => [account.id, account.name]),
+      ),
     [accounts],
   );
   const payeeNamesById = useMemo(
-    () => new Map(payees.map(payee => [payee.id, payee.name])),
+    () =>
+      new Map<PayeeEntity['id'], PayeeEntity['name']>(
+        payees.map(payee => [payee.id, payee.name]),
+      ),
     [payees],
   );
   const categoryNamesById = useMemo(
     () =>
-      new Map(
+      new Map<string, string>(
         categoryGroups.flatMap(group =>
           group.categories.map(category => [category.id, category.name]),
         ),
@@ -169,6 +175,7 @@ function AllTransactions({
   // Avoid visual jumps when sort controls update before async transaction
   // data arrives: only switch preview placement once we have a new list.
   const lastTransactionsRef = useRef(transactions);
+  const lastTransactionsLengthRef = useRef(transactions.length);
   const lastSortKeyRef = useRef(`${sortField ?? ''}:${sortAscDesc ?? ''}`);
   const pendingSortRef = useRef<{
     field?: string;
@@ -188,12 +195,20 @@ function AllTransactions({
     lastSortKeyRef.current = sortKey;
   }
 
-  if (pendingSortRef.current && transactions !== lastTransactionsRef.current) {
+  if (
+    pendingSortRef.current &&
+    (transactions !== lastTransactionsRef.current ||
+      transactions.length !== lastTransactionsLengthRef.current ||
+      (!isPreviewTransactionsLoading && transactions.length > 0))
+  ) {
+    // Wait for a new transactions list, or a length/loading transition, before
+    // switching preview placement so we don't swap blocks too early.
     resolvedSortRef.current = pendingSortRef.current;
     pendingSortRef.current = null;
   }
 
   lastTransactionsRef.current = transactions;
+  lastTransactionsLengthRef.current = transactions.length;
 
   const runningBalance = useMemo(() => {
     if (!showBalances) {
@@ -222,7 +237,9 @@ function AllTransactions({
   const allTransactions = useMemo(() => {
     // Don't prepend scheduled transactions if we are filtering
     if (!filtered && previewTransactions.length > 0) {
-      if (resolvedSortRef.current.field) {
+      const hasActiveSort = sortKey !== ':';
+
+      if (hasActiveSort && resolvedSortRef.current.field) {
         const sortField = resolvedSortRef.current.field;
         const sortDirection = resolvedSortRef.current.ascDesc ?? 'desc';
 
@@ -267,8 +284,7 @@ function AllTransactions({
     categoryNamesById,
     filtered,
     payeeNamesById,
-    sortAscDesc,
-    sortField,
+    sortKey,
     previewTransactions,
     transactions,
   ]);
@@ -321,13 +337,22 @@ function getTransactionSortValue(
       return accountNamesById?.get(transaction.account) ?? '';
     case 'payee':
     case 'payee.name':
-      return transaction.payee ? payeeNamesById?.get(transaction.payee) ?? '' : '';
+      return transaction.payee
+        ? (payeeNamesById?.get(transaction.payee) ?? '')
+        : '';
     case 'category':
     case 'category.name':
-      return transaction.category ? categoryNamesById?.get(transaction.category) ?? '' : '';
+      return transaction.category
+        ? (categoryNamesById?.get(transaction.category) ?? '')
+        : '';
+    case 'notes':
+      return transaction.notes ?? '';
     case 'amount':
+    case 'payment':
+    case 'deposit':
       return transaction.amount ?? 0;
     case 'cleared':
+      return transaction.cleared ? 1 : 0;
     case 'reconciled':
       return transaction.reconciled ? 1 : 0;
     case 'date':
