@@ -151,7 +151,7 @@ function AllTransactions({
     () =>
       new Map<string, string>(
         categoryGroups.flatMap(group =>
-          group.categories.map(category => [category.id, category.name]),
+          group.categories?.map(category => [category.id, category.name]) ?? [],
         ),
       ),
     [categoryGroups],
@@ -352,7 +352,7 @@ function getTransactionSortValue(
     case 'deposit':
       return transaction.amount ?? 0;
     case 'cleared':
-      return transaction.cleared ? 1 : 0;
+      return (transaction.reconciled ? 2 : 0) + (transaction.cleared ? 1 : 0);
     case 'reconciled':
       return transaction.reconciled ? 1 : 0;
     case 'date':
