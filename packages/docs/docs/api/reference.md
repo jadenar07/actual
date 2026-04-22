@@ -211,7 +211,7 @@ A working example of API fields:
       "parent_id": "parent-id",
       "is_child": true,
       "is_parent": false,
-      "category_id": "71376207-72f9-4b2b-ae24-0931a226f76a",
+      "category: "71376207-72f9-4b2b-ae24-0931a226f76a",
     },
     {
       "amount": 150,
@@ -220,7 +220,7 @@ A working example of API fields:
       "parent_id": "parent-id",
       "is_child": true,
       "is_parent": false,
-      "category_id": "315d3776-d2a8-4d82-8a69-648b0d80125a",
+      "category": "315d3776-d2a8-4d82-8a69-648b0d80125a",
     }
   ]
 }
