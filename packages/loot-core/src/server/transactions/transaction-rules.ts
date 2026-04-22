@@ -1143,19 +1143,17 @@ export async function finalizeTransactionForRules(
   }
 
   // remove temporary normalization used for "is nothing" rules
-  const normalizedRuleFields = (
-    trans as TransactionEntity & { _normalizedRuleFields?: string[] }
-  )._normalizedRuleFields;
-
-  if (normalizedRuleFields) {
-    normalizedRuleFields.forEach(field => {
-      if (trans[field] === null) {
-        delete trans[field];
+  if (
+    '_normalizedRuleFields' in trans &&
+    Array.isArray(trans._normalizedRuleFields)
+  ) {
+    trans._normalizedRuleFields.forEach(field => {
+      if ((trans as Record<string, unknown>)[field] === null) {
+        delete (trans as Record<string, unknown>)[field];
       }
     });
 
-    delete (trans as TransactionEntity & { _normalizedRuleFields?: string[] })
-      ._normalizedRuleFields;
+    delete trans._normalizedRuleFields;
   }
 
   return trans;
