@@ -1,4 +1,10 @@
-import React, { createRef, PureComponent, useEffect, useMemo } from 'react';
+import React, {
+  createRef,
+  PureComponent,
+  useEffect,
+  useMemo,
+  useRef,
+} from 'react';
 import type { ReactElement, RefObject } from 'react';
 import { Trans } from 'react-i18next';
 import { Navigate, useLocation, useParams } from 'react-router';
@@ -95,10 +101,15 @@ function isTransactionFilterEntity(
 
 type AllTransactionsProps = {
   account?: AccountEntity | undefined;
+  accounts: AccountEntity[];
+  payees: PayeeEntity[];
+  categoryGroups: CategoryGroupEntity[];
   transactions: TransactionEntity[];
   balances: Record<TransactionEntity['id'], IntegerAmount> | null;
   showBalances?: boolean | undefined;
   filtered?: boolean | undefined;
+  sortField?: string;
+  sortAscDesc?: 'asc' | 'desc';
   children: (
     transactions: TransactionEntity[],
     balances: Record<TransactionEntity['id'], IntegerAmount> | null,
@@ -107,16 +118,46 @@ type AllTransactionsProps = {
 
 function AllTransactions({
   account,
+  accounts,
+  payees,
+  categoryGroups,
   transactions,
   balances,
   showBalances,
   filtered,
+  sortField,
+  sortAscDesc,
   children,
 }: AllTransactionsProps) {
   const accountId = account?.id;
   const { dispatch: splitsExpandedDispatch } = useSplitsExpanded();
   const { previewTransactions, isLoading: isPreviewTransactionsLoading } =
     useAccountPreviewTransactions({ accountId });
+  const accountNamesById = useMemo(
+    () =>
+      new Map<AccountEntity['id'], AccountEntity['name']>(
+        accounts.map(account => [account.id, account.name]),
+      ),
+    [accounts],
+  );
+  const payeeNamesById = useMemo(
+    () =>
+      new Map<PayeeEntity['id'], PayeeEntity['name']>(
+        payees.map(payee => [payee.id, payee.name]),
+      ),
+    [payees],
+  );
+  const categoryNamesById = useMemo(
+    () =>
+      new Map<string, string>(
+        categoryGroups.flatMap(
+          group =>
+            group.categories?.map(category => [category.id, category.name]) ??
+            [],
+        ),
+      ),
+    [categoryGroups],
+  );
 
   useEffect(() => {
     if (!isPreviewTransactionsLoading) {
@@ -132,6 +173,44 @@ function AllTransactions({
   ]);
 
   transactions ??= [];
+
+  // Avoid visual jumps when sort controls update before async transaction
+  // data arrives: only switch preview placement once we have a new list.
+  const lastTransactionsRef = useRef(transactions);
+  const lastTransactionsLengthRef = useRef(transactions.length);
+  const lastSortKeyRef = useRef(`${sortField ?? ''}:${sortAscDesc ?? ''}`);
+  const pendingSortRef = useRef<{
+    field?: string;
+    ascDesc?: 'asc' | 'desc';
+  } | null>(null);
+  const resolvedSortRef = useRef<{
+    field?: string;
+    ascDesc?: 'asc' | 'desc';
+  }>({ field: sortField, ascDesc: sortAscDesc });
+
+  const sortKey = `${sortField ?? ''}:${sortAscDesc ?? ''}`;
+  if (sortKey !== lastSortKeyRef.current) {
+    pendingSortRef.current = {
+      field: sortField,
+      ascDesc: sortAscDesc,
+    };
+    lastSortKeyRef.current = sortKey;
+  }
+
+  if (
+    pendingSortRef.current &&
+    (transactions !== lastTransactionsRef.current ||
+      transactions.length !== lastTransactionsLengthRef.current ||
+      (!isPreviewTransactionsLoading && transactions.length > 0))
+  ) {
+    // Wait for a new transactions list, or a length/loading transition, before
+    // switching preview placement so we don't swap blocks too early.
+    resolvedSortRef.current = pendingSortRef.current;
+    pendingSortRef.current = null;
+  }
+
+  lastTransactionsRef.current = transactions;
+  lastTransactionsLengthRef.current = transactions.length;
 
   const runningBalance = useMemo(() => {
     if (!showBalances) {
@@ -160,10 +239,57 @@ function AllTransactions({
   const allTransactions = useMemo(() => {
     // Don't prepend scheduled transactions if we are filtering
     if (!filtered && previewTransactions.length > 0) {
-      return previewTransactions.concat(transactions);
+      const hasActiveSort = sortKey !== ':';
+
+      if (hasActiveSort && resolvedSortRef.current.field) {
+        const sortField = resolvedSortRef.current.field;
+        const sortDirection = resolvedSortRef.current.ascDesc ?? 'desc';
+
+        return [...transactions, ...previewTransactions]
+          .map((transaction, index) => ({ transaction, index }))
+          .sort((left, right) => {
+            const comparison = compareTransactionSortValues(
+              getTransactionSortValue(
+                left.transaction,
+                sortField,
+                accountNamesById,
+                payeeNamesById,
+                categoryNamesById,
+              ),
+              getTransactionSortValue(
+                right.transaction,
+                sortField,
+                accountNamesById,
+                payeeNamesById,
+                categoryNamesById,
+              ),
+            );
+
+            if (comparison !== 0) {
+              return sortDirection === 'asc' ? comparison : -comparison;
+            }
+
+            return left.index - right.index;
+          })
+          .map(({ transaction }) => transaction);
+      }
+
+      const shouldAppendPreview = resolvedSortRef.current.ascDesc === 'asc';
+
+      return shouldAppendPreview
+        ? transactions.concat(previewTransactions)
+        : previewTransactions.concat(transactions);
     }
     return transactions;
-  }, [filtered, previewTransactions, transactions]);
+  }, [
+    accountNamesById,
+    categoryNamesById,
+    filtered,
+    payeeNamesById,
+    sortKey,
+    previewTransactions,
+    transactions,
+  ]);
 
   const allBalances = useMemo(() => {
     // Don't prepend scheduled transactions if we are filtering
@@ -198,6 +324,67 @@ function getField(field?: string) {
     default:
       return field;
   }
+}
+
+function getTransactionSortValue(
+  transaction: TransactionEntity,
+  field?: string,
+  accountNamesById?: Map<AccountEntity['id'], AccountEntity['name']>,
+  payeeNamesById?: Map<PayeeEntity['id'], PayeeEntity['name']>,
+  categoryNamesById?: Map<string, string>,
+) {
+  switch (field) {
+    case 'account':
+    case 'account.name':
+      return accountNamesById?.get(transaction.account) ?? '';
+    case 'payee':
+    case 'payee.name':
+      return transaction.payee
+        ? (payeeNamesById?.get(transaction.payee) ?? '')
+        : '';
+    case 'category':
+    case 'category.name':
+      return transaction.category
+        ? (categoryNamesById?.get(transaction.category) ?? '')
+        : '';
+    case 'notes':
+      return transaction.notes ?? '';
+    case 'amount':
+    case 'payment':
+    case 'deposit':
+      return transaction.amount ?? 0;
+    case 'cleared':
+      return (transaction.reconciled ? 2 : 0) + (transaction.cleared ? 1 : 0);
+    case 'reconciled':
+      return transaction.reconciled ? 1 : 0;
+    case 'date':
+    default:
+      return transaction.date ?? '';
+  }
+}
+
+function compareTransactionSortValues(left: unknown, right: unknown) {
+  if (left === right) {
+    return 0;
+  }
+
+  if (left == null) {
+    return 1;
+  }
+
+  if (right == null) {
+    return -1;
+  }
+
+  if (typeof left === 'number' && typeof right === 'number') {
+    return left - right;
+  }
+
+  if (typeof left === 'boolean' && typeof right === 'boolean') {
+    return Number(left) - Number(right);
+  }
+
+  return String(left).localeCompare(String(right));
 }
 
 type AccountInternalProps = {
@@ -1763,10 +1950,15 @@ class AccountInternal extends PureComponent<
     return (
       <AllTransactions
         account={account}
+        accounts={accounts}
+        payees={payees}
+        categoryGroups={categoryGroups}
         transactions={transactions}
         balances={balances}
         showBalances={showBalances}
         filtered={transactionsFiltered}
+        sortField={this.state.sort?.field}
+        sortAscDesc={this.state.sort?.ascDesc}
       >
         {(allTransactions, allBalances) => (
           <SelectedProviderWithItems
