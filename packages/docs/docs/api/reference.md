@@ -168,9 +168,9 @@ an array of sub-transactions in the `subtransactions` field. This field is prima
 
 In practice, updating subtransactions individually may not work reliably. To modify split transactions, update the parent transaction and provide the full `subtransactions` array.
 
-Subtransactions are full transaction records and must include all standard transaction fields.
+Subtransactions are treated as full transaction records and are validated similarly to regular transactions.
 
-When creating subtransactions via the API, each subtransaction typically requires:
+In practice, API creation commonly requires at least the fields below.
 
 - `amount`
 - `account`
