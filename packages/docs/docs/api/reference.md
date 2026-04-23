@@ -221,7 +221,7 @@ A working example of API fields:
     },
     {
       "amount": 150,
-      "account": "9c1e5de4-ecf8-41c2-8a97-4b2b-ae24-0931a226f76a",
+      "account": "9c1e5de4-ecf8-41c2-8a97-4a1e8bc385c9",
       "date": "2024-08-12",
       "parent_id": "parent-id",
       "is_child": true,
