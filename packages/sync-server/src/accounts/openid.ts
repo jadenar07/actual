@@ -1,5 +1,5 @@
+// @ts-strict-ignore
 import { custom, generators, Issuer } from 'openid-client';
-import { v4 as uuidv4 } from 'uuid';
 
 import {
   clearExpiredSessions,
@@ -15,7 +15,15 @@ import { TOKEN_EXPIRATION_NEVER } from '#util/validate-user';
 
 import { checkPassword } from './password';
 
-export async function bootstrapOpenId(configParameter) {
+export type ConfigParameter = {
+  issuer?: string;
+  discoveryURL?: string;
+  client_id?: string;
+  client_secret?: string;
+  server_hostname?: string;
+};
+
+export async function bootstrapOpenId(configParameter: ConfigParameter) {
   if (!('issuer' in configParameter) && !('discoveryURL' in configParameter)) {
     return { error: 'missing-issuer-or-discoveryURL' };
   }
@@ -254,7 +262,7 @@ export async function loginWithOpenIdFinalize(body) {
           (countUsersWithUserName === 0 ||
             config.get('userCreationMode') === 'login')
         ) {
-          userId = uuidv4();
+          userId = crypto.randomUUID();
           accountDb.mutate(
             'INSERT INTO users (id, user_name, display_name, enabled, owner, role) VALUES (?, ?, ?, 1, ?, ?)',
             [
@@ -303,7 +311,7 @@ export async function loginWithOpenIdFinalize(body) {
       }
     }
 
-    const token = uuidv4();
+    const token = crypto.randomUUID();
 
     let expiration;
     if (config.get('token_expiration') === 'openid-provider') {
@@ -347,7 +355,7 @@ export function getServerHostname() {
   return null;
 }
 
-export function isValidRedirectUrl(url) {
+export function isValidRedirectUrl(url: string | undefined): url is string {
   const serverHostname = getServerHostname();
 
   if (!serverHostname) {
