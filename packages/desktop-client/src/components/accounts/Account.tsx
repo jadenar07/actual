@@ -257,12 +257,8 @@ function AllTransactions({
         })
         .map(({ transaction }) => transaction);
     } else {
-      const shouldAppendPreview =
-        hasActiveSort && resolvedSort.ascDesc === 'asc';
-
-      allTransactions = shouldAppendPreview
-        ? transactions.concat(previewTransactions)
-        : previewTransactions.concat(transactions);
+      // No active sort - fall back to legacy behavior (preview on top).
+      allTransactions = previewTransactions.concat(transactions);
     }
   }
 
