@@ -173,8 +173,6 @@ function AllTransactions({
     ascDesc: sortAscDesc,
   });
   const [pendingSort, setPendingSort] = useState<SortState | null>(null);
-
-  const sortKey = `${sortField ?? ''}:${sortAscDesc ?? ''}`;
   useEffect(() => {
     setPendingSort({
       field: sortField,
