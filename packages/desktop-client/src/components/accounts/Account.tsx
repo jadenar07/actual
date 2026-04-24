@@ -180,7 +180,7 @@ function AllTransactions({
       field: sortField,
       ascDesc: sortAscDesc,
     });
-  }, [sortKey]);
+  }, [sortField, sortAscDesc]);
 
   useEffect(() => {
     if (!pendingSort) {
@@ -221,61 +221,52 @@ function AllTransactions({
     );
   }, [showBalances, previewTransactions, runningBalance]);
 
-  const allTransactions = useMemo(() => {
-    // Don't prepend scheduled transactions if we are filtering
-    if (!filtered && previewTransactions.length > 0) {
-      const hasActiveSort = !!resolvedSort.field;
+  let allTransactions = transactions;
 
-      if (hasActiveSort) {
-        const sortField = resolvedSort.field;
-        const sortDirection = resolvedSort.ascDesc ?? 'desc';
+  // Don't prepend scheduled transactions if we are filtering
+  if (!filtered && previewTransactions.length > 0) {
+    const hasActiveSort = !!resolvedSort.field;
 
-        return [...transactions, ...previewTransactions]
-          .map((transaction, index) => ({ transaction, index }))
-          .sort((left, right) => {
-            const comparison = compareTransactionSortValues(
-              getTransactionSortValue(
-                left.transaction,
-                sortField,
-                accountNamesById,
-                payeeNamesById,
-                categoryNamesById,
-              ),
-              getTransactionSortValue(
-                right.transaction,
-                sortField,
-                accountNamesById,
-                payeeNamesById,
-                categoryNamesById,
-              ),
-            );
+    if (hasActiveSort) {
+      const sortField = resolvedSort.field;
+      const sortDirection = resolvedSort.ascDesc ?? 'desc';
 
-            if (comparison !== 0) {
-              return sortDirection === 'asc' ? comparison : -comparison;
-            }
+      allTransactions = [...transactions, ...previewTransactions]
+        .map((transaction, index) => ({ transaction, index }))
+        .sort((left, right) => {
+          const comparison = compareTransactionSortValues(
+            getTransactionSortValue(
+              left.transaction,
+              sortField,
+              accountNamesById,
+              payeeNamesById,
+              categoryNamesById,
+            ),
+            getTransactionSortValue(
+              right.transaction,
+              sortField,
+              accountNamesById,
+              payeeNamesById,
+              categoryNamesById,
+            ),
+          );
 
-            return left.index - right.index;
-          })
-          .map(({ transaction }) => transaction);
-      }
+          if (comparison !== 0) {
+            return sortDirection === 'asc' ? comparison : -comparison;
+          }
 
+          return left.index - right.index;
+        })
+        .map(({ transaction }) => transaction);
+    } else {
       const shouldAppendPreview =
         hasActiveSort && resolvedSort.ascDesc === 'asc';
 
-      return shouldAppendPreview
+      allTransactions = shouldAppendPreview
         ? transactions.concat(previewTransactions)
         : previewTransactions.concat(transactions);
     }
-    return transactions;
-  }, [
-    accountNamesById,
-    categoryNamesById,
-    filtered,
-    payeeNamesById,
-    resolvedSort,
-    previewTransactions,
-    transactions,
-  ]);
+  }
 
   const allBalances = useMemo(() => {
     // Don't prepend scheduled transactions if we are filtering
